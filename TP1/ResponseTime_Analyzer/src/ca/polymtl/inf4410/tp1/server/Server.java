@@ -86,5 +86,12 @@ public class Server implements ServerInterface {
 
 	}
 
+	public void create(String fileName) throws RemoteException {
+		File f = new File(fileName);
+		if(f.exists()) {
+			System.out.println("fichier ajoute");
+		}
+	}
+
 
 }

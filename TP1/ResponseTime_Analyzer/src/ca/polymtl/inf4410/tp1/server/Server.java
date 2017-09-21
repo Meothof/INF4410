@@ -1,5 +1,6 @@
 package ca.polymtl.inf4410.tp1.server;
 
+import java.io.*;
 import java.util.*;
 import java.rmi.ConnectException;
 import java.rmi.RemoteException;
@@ -13,11 +14,11 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.UUID;
 
 import ca.polymtl.inf4410.tp1.shared.ServerInterface;
 
 public class Server implements ServerInterface {
-	private int lastId;
 	public static void main(String[] args) {
 		Server server = new Server();
 		server.run();
@@ -25,8 +26,6 @@ public class Server implements ServerInterface {
 
 	public Server() {
 		super();
-		File ids = new File("ids.txt");
-		lastId =0;
 	}
 
 	private void run() {
@@ -64,28 +63,11 @@ public class Server implements ServerInterface {
 		return b.length;
 	}
 
-	public int generateClientId(){
-		FileOutputStream fos = null;
-		lastId++;
-		try {
-			fos = new FileOutputStream(new File("ids.txt"));
-			fos.write(lastId);
-		} catch (FileNotFoundException e) {
-
-			e.printStackTrace();
-		} catch (IOException e) {
-			e.printStackTrace();
-		} finally {
-
-			try {
-				if (fos != null)
-					fos.close();
-			} catch (IOException e) {
-				e.printStackTrace();
-			}
-		}
-		return lastId;
-
+	
+	public byte[] generateClientId() throws RemoteException {
+		String uniqueID = UUID.randomUUID().toString();
+		System.out.println("New client id "+uniqueID);
+		return uniqueID.getBytes();
 	}
 
 	@Override

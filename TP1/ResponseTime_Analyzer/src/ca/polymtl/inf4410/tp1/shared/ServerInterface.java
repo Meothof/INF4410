@@ -7,6 +7,7 @@ import java.util.*;
 public interface ServerInterface extends Remote {
 	int execute(int a, int b) throws RemoteException;
 	int execute(byte[] b) throws RemoteException;
+	byte[] generateClientId() throws RemoteException;
 	void create(String fileName) throws RemoteException;
 	ArrayList<String> list() throws RemoteException;
 }

@@ -9,11 +9,21 @@ import java.rmi.registry.Registry;
 import ca.polymtl.inf4410.tp1.shared.ServerInterface;
 import java.util.Random;
 import java.io.IOException;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.nio.file.Files;
+
 
 public class Client {
 	public static void main(String[] args) throws IOException{
 		Client client = new Client();
 		client.displayOptions();
+		//Genere un identifiant à partir du server
+		client.getId();
 		client.handleArgs(args);
 
 
@@ -50,6 +60,7 @@ public class Client {
 	//		}
 	//	}
 
+
 	private ServerInterface loadServerStub(String hostname) {
 		ServerInterface stub = null;
 
@@ -67,10 +78,30 @@ public class Client {
 		return stub;
 	}
 
+	/*
+	* Vérifie si le fichier fileId existe
+	* si il existe on ne fait rien
+	* sinon on crée un nouveau fichier binaire contenant un UUID généré par le serveur
+	*/ 
+	private void getId() throws IOException {
+		String currentDirectory= Paths.get("").toAbsolutePath().toString();
+		File file= new File(currentDirectory + "/fileId"  );
+		if(!file.exists()){
+			Path path = Paths.get(currentDirectory + "/fileId");
+			Files.write(path, distantServerStub.generateClientId()); 
+		}
+	}
+
+	/*
+	* Affiche les commandes disponibles pour l'utilisateur.
+	*/
 	private void displayOptions(){
 		System.out.println("Créer un fichier : create <filename> " );
 	}
 
+	/*
+	* Gestion des commandes à l'aide d'un switch/case
+	*/
 	private void handleArgs(String args[]) throws IOException{
 		ArrayList<String> fileNames;
 		if(args.length ==0){

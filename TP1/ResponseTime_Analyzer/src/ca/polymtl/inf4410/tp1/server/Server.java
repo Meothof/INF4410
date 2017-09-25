@@ -14,11 +14,18 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.nio.file.Files;
 import java.util.UUID;
-
+import java.nio.ByteBuffer;
+import java.util.Arrays;
+import ca.polymtl.inf4410.tp1.shared.Fichier;
 import ca.polymtl.inf4410.tp1.shared.ServerInterface;
+import ca.polymtl.inf4410.tp1.shared.Tools;
+
 
 public class Server implements ServerInterface {
+	private ArrayList<Fichier> listeFichiers;
+	private Tools tools = new Tools();
 	public static void main(String[] args) {
 		Server server = new Server();
 		server.run();
@@ -26,6 +33,7 @@ public class Server implements ServerInterface {
 
 	public Server() {
 		super();
+		listeFichiers = new ArrayList<Fichier>();
 	}
 
 	private void run() {
@@ -72,14 +80,15 @@ public class Server implements ServerInterface {
 
 	@Override
 	public void create(String fileName) throws RemoteException {
-		String currentDir = Paths.get("").toAbsolutePath().toString();
-		File file = new File(currentDir+"/"+fileName);
+
+		File file = new File(Paths.get("").toAbsolutePath().toString()+"/server-files/"+fileName);
 		Boolean bool;
 
 		if(!file.exists()) {
 			try{
 				bool = file.createNewFile();
 				System.out.println("File created: "+bool);
+				listeFichiers.add(new Fichier(fileName, null));
 			}catch(IOException e) {
 				e.printStackTrace();
 			}
@@ -92,8 +101,7 @@ public class Server implements ServerInterface {
 	@Override
 	public ArrayList<String> list() throws RemoteException {
 		ArrayList<String> fileNames=new ArrayList<String>();
-		String currentDir = Paths.get("").toAbsolutePath().toString();
-		File folder = new File(currentDir+"/");
+		File folder = new File(Paths.get("").toAbsolutePath().toString()+"/server-files/");
 		File[] listOfFiles = folder.listFiles();
 		for (File file : listOfFiles) {
 			if (file.isFile()) {
@@ -104,4 +112,27 @@ public class Server implements ServerInterface {
 
 
 	}
+
+	@Override
+	public byte[] get(String nom, byte[] checksum) throws RemoteException {
+		try {
+			Path file = Paths.get(Paths.get("").toAbsolutePath().toString() + "/server-files/" + nom);
+			if (checksum == null) {
+				return Files.readAllBytes(file);
+			}
+			else if(!Arrays.equals(tools.checksum("/server-files/"+nom),checksum)){
+				return Files.readAllBytes(file);
+			}
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+		return  null;
+		}
+
+//	@java.lang.Override
+//	public int lock(String nom, byte[] clientid, String checksum) throws RemoteException {
+//		for
+//
+//		return 0;
+//	}
 }

@@ -5,8 +5,6 @@ import java.rmi.NotBoundException;
 import java.rmi.RemoteException;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
-
-import ca.polymtl.inf4410.tp1.shared.ServerInterface;
 import java.util.Random;
 import java.io.IOException;
 import java.io.File;
@@ -17,11 +15,13 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.Files;
 
+import ca.polymtl.inf4410.tp1.shared.ServerInterface;
+import ca.polymtl.inf4410.tp1.shared.Tools;
 
 public class Client {
 	public static void main(String[] args) throws IOException{
 		Client client = new Client();
-		client.displayOptions();
+//		client.displayOptions();
 		//Genere un identifiant à partir du server
 		client.getId();
 		client.handleArgs(args);
@@ -33,6 +33,7 @@ public class Client {
 	FakeServer localServer = null;
 	private ServerInterface localServerStub = null;
 	private ServerInterface distantServerStub = null;
+	private Tools tools = new Tools();
 
 	public Client() {
 		super();
@@ -111,13 +112,37 @@ public class Client {
 			switch(args[0]){
 				case("create"):
 					distantServerStub.create(args[1]);
+					System.out.println("file created");
 					break;
 				case("list"):
 					fileNames = distantServerStub.list();
 					for(String fileName : fileNames){
-						System.out.println("* "+fileName);
+						System.out.println("* "+fileName );
 					}
 					break;
+				case("get"):
+					String currentDirectory= Paths.get("").toAbsolutePath().toString();
+					String filePath = "/client-files/"+ args[1];
+					File file= new File(currentDirectory + filePath );
+					if(!file.exists()){
+						Path path = Paths.get(currentDirectory + filePath);
+						Files.write(path, distantServerStub.get(args[1], null));
+						System.out.println("Fichier ajoute  ");
+					}
+					else{
+						Path path = Paths.get(currentDirectory +filePath);
+						byte[] newContent = distantServerStub.get(args[1], tools.checksum(filePath));
+						if(newContent != null){
+							Files.write(path, newContent );
+							System.out.println("Fichier mis a jour  ");
+						}
+						else{
+							System.out.println("Fichier  est deja a jour  ");
+						}
+
+					}
+					break;
+
 				default:
 					System.out.println("Saisissez un argument valide");
 					break;

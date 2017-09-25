@@ -21,9 +21,10 @@ import java.nio.file.Files;
 public class Client {
 	public static void main(String[] args) throws IOException{
 		Client client = new Client();
-		client.displayOptions();
+//		client.displayOptions();
 		//Genere un identifiant à partir du server
 		client.getId();
+		//gestion des commandes
 		client.handleArgs(args);
 
 

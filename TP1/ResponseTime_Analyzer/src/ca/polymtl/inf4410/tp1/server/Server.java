@@ -34,6 +34,16 @@ public class Server implements ServerInterface {
 	public Server() {
 		super();
 		listeFichiers = new ArrayList<Fichier>();
+		try{
+			ArrayList<String> files = list();
+			for(String l : files){
+				listeFichiers.add(new Fichier(l,null));
+			}
+		}catch(RemoteException e){
+			System.err.println("Erreur: " + e.getMessage());
+		}
+
+
 	}
 
 	private void run() {
@@ -129,10 +139,24 @@ public class Server implements ServerInterface {
 		return  null;
 		}
 
-//	@java.lang.Override
-//	public int lock(String nom, byte[] clientid, String checksum) throws RemoteException {
-//		for
-//
-//		return 0;
-//	}
+	@java.lang.Override
+	public int lock(String nom, byte[] clientid) throws RemoteException {
+		for(Fichier f : listeFichiers){
+			
+			if(f.getNom().equals(nom)){
+				if(f.getLock()!=null){
+					return 0;
+				}else{
+					f.lock(clientid);
+					return 1;
+				}
+
+			}
+		}
+
+		return 0;
+	}
+
+
+
 }

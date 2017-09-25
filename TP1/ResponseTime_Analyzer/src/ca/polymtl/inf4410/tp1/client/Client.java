@@ -100,6 +100,29 @@ public class Client {
 		System.out.println("Créer un fichier : create <filename> " );
 	}
 
+	private void get(String fileName) throws IOException{
+		String currentDirectory= Paths.get("").toAbsolutePath().toString();
+		String filePath = "/client-files/"+ fileName;
+		File file= new File(currentDirectory + filePath );
+		if(!file.exists()){
+			Path path = Paths.get(currentDirectory + filePath);
+			Files.write(path, distantServerStub.get(fileName, null));
+			System.out.println("Fichier ajoute  : "+fileName);
+		}
+		else{
+			Path path = Paths.get(currentDirectory +filePath);
+			byte[] newContent = distantServerStub.get(fileName, tools.checksum(filePath));
+			if(newContent != null){
+				Files.write(path, newContent );
+				System.out.println("Fichier mis a jour  : "+fileName);
+			}
+			else{
+				System.out.println("Fichier est deja a jour  : "+fileName);
+			}
+
+		}
+
+	}
 	/*
 	* Gestion des commandes à l'aide d'un switch/case
 	*/
@@ -121,25 +144,28 @@ public class Client {
 					}
 					break;
 				case("get"):
-					String currentDirectory= Paths.get("").toAbsolutePath().toString();
-					String filePath = "/client-files/"+ args[1];
-					File file= new File(currentDirectory + filePath );
-					if(!file.exists()){
-						Path path = Paths.get(currentDirectory + filePath);
-						Files.write(path, distantServerStub.get(args[1], null));
-						System.out.println("Fichier ajoute  ");
-					}
-					else{
-						Path path = Paths.get(currentDirectory +filePath);
-						byte[] newContent = distantServerStub.get(args[1], tools.checksum(filePath));
-						if(newContent != null){
-							Files.write(path, newContent );
-							System.out.println("Fichier mis a jour  ");
-						}
-						else{
-							System.out.println("Fichier  est deja a jour  ");
-						}
+					get(args[1]);
 
+					break;
+
+				case("syncLocalDir"):
+					fileNames = distantServerStub.list();
+					for(String fileName : fileNames){
+						get(fileName);
+					}
+					break;
+
+				case("lock"):
+					byte[] clientId = null;
+					String currentDirectory= Paths.get("").toAbsolutePath().toString();
+					Path path = Paths.get(currentDirectory + "/fileId");
+					clientId = Files.readAllBytes(path);
+
+					if(distantServerStub.lock(args[1],clientId)==0){
+						System.out.println(args[1]+ " deja verrouille par :");
+					}else{
+						System.out.println(args[1]+ " verrouille ");
+						get(args[1]);
 					}
 					break;
 
@@ -148,7 +174,10 @@ public class Client {
 					break;
 
 			}
+
+
 		}
+
 
 	}
 

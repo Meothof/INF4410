@@ -32,6 +32,10 @@ public class Fichier {
         this.contenu = c;
     }
 
+    public byte[] getLock(){
+        return this.lockBy;
+    }
+
     public void lock(byte[] idClient) {
         this.lockBy = idClient;
     }
@@ -40,4 +44,12 @@ public class Fichier {
         this.lockBy = null;
     }
 
+    @java.lang.Override
+    public java.lang.String toString() {
+        return "Fichier{" +
+                "nom='" + nom + '\'' +
+                ", contenu=" + java.util.Arrays.toString(contenu) +
+                ", lockBy=" + java.util.Arrays.toString(lockBy) +
+                '}';
+    }
 }

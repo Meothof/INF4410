@@ -18,8 +18,6 @@ public class Tools {
 
     public byte[] checksum(String fichier) {
         byte[] d = null;
-
-
         try {
             Path file = Paths.get(Paths.get("").toAbsolutePath().toString() + "/" + fichier);
             byte[] b = Files.readAllBytes(file);

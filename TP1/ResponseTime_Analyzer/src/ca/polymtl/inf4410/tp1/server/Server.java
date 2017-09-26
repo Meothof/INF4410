@@ -24,8 +24,10 @@ import ca.polymtl.inf4410.tp1.shared.Tools;
 
 
 public class Server implements ServerInterface {
+
 	private ArrayList<Fichier> listeFichiers;
 	private Tools tools = new Tools();
+
 	public static void main(String[] args) {
 		Server server = new Server();
 		server.run();
@@ -39,11 +41,10 @@ public class Server implements ServerInterface {
 			for(String l : files){
 				listeFichiers.add(new Fichier(l,null));
 			}
-		}catch(RemoteException e){
+		}
+		catch(RemoteException e){
 			System.err.println("Erreur: " + e.getMessage());
 		}
-
-
 	}
 
 	private void run() {
@@ -76,12 +77,12 @@ public class Server implements ServerInterface {
 	public int execute(int a, int b) throws RemoteException {
 		return a + b;
 	}
+
 	@Override
 	public int execute(byte[] b) throws RemoteException {
 		return b.length;
 	}
 
-	
 	public byte[] generateClientId() throws RemoteException {
 		String uniqueID = UUID.randomUUID().toString();
 		System.out.println("New client id "+uniqueID);
@@ -90,22 +91,18 @@ public class Server implements ServerInterface {
 
 	@Override
 	public void create(String fileName) throws RemoteException {
-
 		File file = new File(Paths.get("").toAbsolutePath().toString()+"/server-files/"+fileName);
 		Boolean bool;
-
 		if(!file.exists()) {
 			try{
 				bool = file.createNewFile();
-				System.out.println("File created: "+bool);
+				System.out.println("Fichier créé : " + bool);
 				listeFichiers.add(new Fichier(fileName, null));
-			}catch(IOException e) {
+			}
+			catch(IOException e) {
 				e.printStackTrace();
 			}
-
 		}
-
-
 	}
 
 	@Override
@@ -119,8 +116,6 @@ public class Server implements ServerInterface {
 			}
 		}
 		return fileNames;
-
-
 	}
 
 	@Override
@@ -137,26 +132,48 @@ public class Server implements ServerInterface {
 			e.printStackTrace();
 		}
 		return  null;
-		}
+	}
 
 	@java.lang.Override
 	public int lock(String nom, byte[] clientid) throws RemoteException {
-		for(Fichier f : listeFichiers){
-			
-			if(f.getNom().equals(nom)){
-				if(f.getLock()!=null){
+		for(Fichier f : listeFichiers) {
+			if(f.getNom().equals(nom)) {
+				if(f.getLock()!=null) {
 					return 0;
-				}else{
+				}
+				else {
 					f.lock(clientid);
 					return 1;
 				}
-
 			}
 		}
-
 		return 0;
 	}
 
-
+	@Override
+	public int push(String nom, byte[] content, byte[] clientid) throws RemoteException {
+		for(Fichier f : listeFichiers) {
+			if(f.getNom().equals(nom)) {
+				if(Arrays.equals(f.getLock(), clientid)) {
+					String currentDirectory= Paths.get("").toAbsolutePath().toString();
+					String filePath = "/server-files/" + nom;
+					File file = new File(currentDirectory + filePath);
+					Path path = Paths.get(currentDirectory + filePath);
+					try {
+						Files.write(path, content);
+					}
+					catch(IOException e) {
+						e.printStackTrace();
+					}
+					f.unlock();
+					return 1;
+				}
+				else {
+					return 0;
+				}
+			}
+		}
+		return 0;
+	}
 
 }

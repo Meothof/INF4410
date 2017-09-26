@@ -12,5 +12,5 @@ public interface ServerInterface extends Remote {
 	ArrayList<String> list() throws RemoteException;
 	byte[] get(String nom, byte[] checksum) throws RemoteException;
 	int lock(String nom, byte[] clientid) throws RemoteException;
-
+	int push(String nom, byte[] content, byte[] clientid) throws RemoteException;
 }

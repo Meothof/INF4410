@@ -22,7 +22,6 @@ import ca.polymtl.inf4410.tp1.shared.Tools;
 public class Client {
 	public static void main(String[] args) throws IOException{
 		Client client = new Client();
-//		client.displayOptions();
 		//Genere un identifiant à partir du server
 		client.getId();
 		//gestion des commandes
@@ -42,8 +41,8 @@ public class Client {
 		}
 		localServer = new FakeServer();
 		localServerStub = loadServerStub("127.0.0.1");
-		//		distantServerStub = loadServerStub("132.207.12.216");
-		distantServerStub = loadServerStub("127.0.0.1");
+				distantServerStub = loadServerStub("132.207.12.216");
+//		distantServerStub = loadServerStub("127.0.0.1");
 
 	}
 
@@ -94,9 +93,7 @@ public class Client {
 	/*
 	* Affiche les commandes disponibles pour l'utilisateur.
 	*/
-	private void displayOptions(){
-		System.out.println("Créer un fichier : create <filename> " );
-	}
+
 
 	private void get(String fileName) throws IOException{
 		String currentDirectory= Paths.get("").toAbsolutePath().toString();
@@ -134,8 +131,19 @@ public class Client {
 		else{
 			switch(args[0]){
 				case("create"):
-					distantServerStub.create(args[1]);
-					System.out.println("file created");
+					int resCreate = 0;
+					try{
+						resCreate =distantServerStub.create(args[1]);
+					} catch (IOException e) {
+						e.printStackTrace();
+					}
+
+					if(resCreate==1){
+						System.out.println("fichier cree");
+					}else{
+						System.out.println("fichier deja cree");
+					}
+
 					break;
 				case("list"):
 					fileNames = distantServerStub.list();
@@ -158,7 +166,7 @@ public class Client {
 					path = Paths.get(currentDirectory + "/fileId");
 					clientId = Files.readAllBytes(path);
 					if(distantServerStub.lock(args[1],clientId)==0) {
-						System.out.println(args[1]+ " déjà verrouillé par :");
+						System.out.println(args[1]+ " déjà verrouillé par un autre utilisateur");
 					}
 					else {
 						System.out.println(args[1]+ " verrouillé ");
@@ -170,14 +178,21 @@ public class Client {
 					currentDirectory= Paths.get("").toAbsolutePath().toString();
 					path = Paths.get(currentDirectory + "/fileId");
 					clientId = Files.readAllBytes(path);
+					int resPush = 0;
 					byte[] content = null;
 					try {
 						Path file = Paths.get(Paths.get("").toAbsolutePath().toString() + "/client-files/" + args[1]);
 						content = Files.readAllBytes(file);
+
 					} catch (IOException e) {
 						e.printStackTrace();
 					}
-					if(distantServerStub.push(args[1], content, clientId) == 0) {
+					try{
+						resPush =distantServerStub.push(args[1], content, clientId);
+					} catch (IOException e) {
+						e.printStackTrace();
+					}
+					if( resPush != 1) {
 						System.out.println("Vous devez lock le fichier avant de push.");
 					}
 					else {

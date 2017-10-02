@@ -90,7 +90,7 @@ public class Server implements ServerInterface {
 	}
 
 	@Override
-	public void create(String fileName) throws RemoteException {
+	public int create(String fileName) throws RemoteException {
 		File file = new File(Paths.get("").toAbsolutePath().toString()+"/server-files/"+fileName);
 		Boolean bool;
 		if(!file.exists()) {
@@ -102,7 +102,9 @@ public class Server implements ServerInterface {
 			catch(IOException e) {
 				e.printStackTrace();
 			}
+			return 1;
 		}
+		return 0;
 	}
 
 	@Override

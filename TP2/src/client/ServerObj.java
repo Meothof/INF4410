@@ -7,10 +7,8 @@ import java.rmi.NotBoundException;
 import java.rmi.RemoteException;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
+import java.util.Random;
 
-/**
- * Created by thmof on 17-10-30.
- */
 public class ServerObj {
     private int id;
     private String ip;
@@ -27,22 +25,42 @@ public class ServerObj {
 
     public ServerInterface loadServerStub(String hostname) {
         ServerInterface stub = null;
-
         try {
             Registry registry = LocateRegistry.getRegistry(hostname, 5031);
             stub = (ServerInterface) registry.lookup("server");
             setQ(stub.getQ());
         } catch (NotBoundException e) {
-            System.out.println("Erreur: Le nom '" + e.getMessage()
-                    + "' n'est pas défini dans le registre.");
+            System.out.println("Erreur: Le nom '" + e.getMessage() + "' n'est pas défini dans le registre.");
         } catch (AccessException e) {
             System.out.println("Erreur: " + e.getMessage());
         } catch (RemoteException e) {
             System.out.println("Erreur: " + e.getMessage());
         }
-
-
         return stub;
+    }
+
+    private boolean refuseTask(int taskLength) {
+        float t = ((float)taskLength - this.getQ()) / (5*this.getQ());
+        Random rand = new Random();
+        float r = rand.nextFloat();
+        if (r > t) {
+            return false;
+        }
+        return true;
+    }
+
+    public int processTask(String task[]) {
+        boolean taskRefused = refuseTask(task.length);
+        if (taskRefused) {
+            return -1;
+        }
+        else {
+            this.setResultatPartiel(0);
+            for (int i = 0; i < task.length; i++) {
+                this.processLine(task[i]);
+            }
+        }
+        return this.getResultatPartiel();
     }
 
     public void processLine(String line){
@@ -50,19 +68,16 @@ public class ServerObj {
         String[] splitLine = line.split("\\s+");
         try {
             if(splitLine[0].equals("pell")){
-                tmpRes+=this.getStub().pell(Integer.parseInt(splitLine[1]))%4000;
+                tmpRes += this.getStub().pell(Integer.parseInt(splitLine[1])) % 4000;
             }
             else if(splitLine[0].equals("prime")){
-                tmpRes+=this.getStub().prime(Integer.parseInt(splitLine[1]))%4000;
+                tmpRes += this.getStub().prime(Integer.parseInt(splitLine[1])) % 4000;
             }
         } catch (RemoteException e) {
             e.printStackTrace();
         }
-        this.setResultatPartiel(tmpRes+this.getResultatPartiel());
+        this.setResultatPartiel(tmpRes + this.getResultatPartiel());
     }
-
-
-
 
     public int getId() {
         return id;
@@ -108,9 +123,7 @@ public class ServerObj {
     public boolean equals(Object o) {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
-
         ServerObj serverObj = (ServerObj) o;
-
         return id == serverObj.id;
     }
 

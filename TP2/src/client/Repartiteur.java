@@ -23,7 +23,7 @@ public class Repartiteur {
     private int resultat;
     private Boolean secure = false;
     private ArrayList<ServerObj> listServer;
-    String operationList[];
+//    String operationList[];
 
     public static void main(String[] args) throws IOException {
         long debut = System.currentTimeMillis();
@@ -32,7 +32,14 @@ public class Repartiteur {
             System.out.println("Saisissez un argument");
         }
         else{
-            rep.splitWork(Paths.get(Paths.get("").toAbsolutePath().toString() +"/fichiers/"+ args[0]));
+            try{
+                List<String> lines = Files.readAllLines(Paths.get(Paths.get("").toAbsolutePath().toString() +"/fichiers/"+ args[0]));
+                rep.splitWork(lines.toArray(new String[lines.size()]));
+            }
+            catch(IOException e){
+                e.printStackTrace();
+            }
+
         }
         System.out.print("Temps execution: ");
         System.out.println(System.currentTimeMillis()-debut);
@@ -72,10 +79,7 @@ public class Repartiteur {
     /*
      * Répartition du travail de manière à maximiser la taille des tâches envoyées sans recevoir trop de refus (10%)
      */
-    private void splitWork(Path file) {
-        try {
-            List<String> lines = Files.readAllLines(file);
-            operationList = lines.toArray(new String[lines.size()]);
+    private void splitWork(String[] operationList) {
             int nbOpTotal = operationList.length;
             System.out.println("Nombre d'opérations à traiter : "+nbOpTotal);
             int nbOpTraites = 0;
@@ -96,45 +100,85 @@ public class Repartiteur {
                             n = server.getQ();
                         }
                     }
-                    //System.out.println(n+" operations envoyees au serveur "+i);
+                    System.out.println(n+" operations envoyees au serveur "+i);
+
+                    
                     res = server.processTask(Arrays.copyOfRange(operationList, nbOpTraites, nbOpTraites + n));
-                    if (!this.secure) {
-                        if (!verif(res, i, nbOpTraites, nbOpTraites + n)) {
-                            res = -1; //résultat pas fiable -> pas pris en compte
-                            //System.out.println("resultats faux");
+
+                    //le serveur est en panne
+                    if(res == -2){
+                        System.out.println("serveur "+ i+ "en panne");
+                        //On supprime le serveur
+                        listServer.remove(server);
+                        // On recommence Splitwork sur la partie traite par serveur i
+                        this.resultat = 0;
+                        splitWork(operationList);
+                        return;
+
+                    }
+                    else{
+                        if (!this.secure) {
+
+                            //modif theo
+                            //En mode non securise tant que la valeur nest pas validee par au moins deux serveurs, on relance le calcul
+                            while(!verif(operationList, res, i, nbOpTraites, nbOpTraites + n)){
+                                res = server.processTask(Arrays.copyOfRange(operationList, nbOpTraites, nbOpTraites + n));
+                            }
+//                        if (!verif(res, i, nbOpTraites, nbOpTraites + n)) {
+//                            res = -1; //résultat pas fiable -> pas pris en compte
+//                            System.out.println("resultats faux");
+//                        }
+                        }
+                        if (res != -1) {
+                            nbOpTraites += n;
+                            resultat += res;
+                        }
+                        else {
+                            //System.out.println("Refus");
+                            nbRefus++;
                         }
                     }
-                    if (res != -1) {
-                        nbOpTraites += n;
-                        resultat += res;
-                    }
-                    else {
-                        //System.out.println("Refus");
-                        nbRefus++;
-                    }
+
+
+
                 }
             }
             System.out.println("Résultat : " + (resultat%4000));
             System.out.println("Nombre de refus reçus : " + nbRefus);
-        }
-        catch(IOException e){
-            e.printStackTrace();
-        }
+
+
     }
 
-    private boolean verif(int res, int s, int start, int end) {
+
+    private boolean verif(String[] operationList, int res, int s, int start, int end) {
         ServerObj server = null;
         int res2 = 0;
         for (int i=0; i<listServer.size(); i++) {
             if (i != s) {
-                //System.out.print("    verification du resultat du serveur "+s+" avec le serveur "+i);
+//                System.out.println("    verification du resultat du serveur "+s+" avec le serveur "+i);
                 server = listServer.get(i);
-                res2 = server.processTask(Arrays.copyOfRange(operationList, start, end));
+
+                //modif theo
+                //Si le serveur de verification a une plus petite capacite que le serveur initial, on decoupe lintervalle de maniere adequat
+                int n_chunk = (end - start)/server.getQ();
+                int r = 0;
+                for(int j = 0; j < n_chunk; j++){
+                    r = server.processTask(Arrays.copyOfRange(operationList, start + j*server.getQ(), start + (j+1)*server.getQ()));
+                    if(r == -2){
+                        listServer.remove(server);
+                        verif(operationList, res, s, start, end);
+                        break;
+                    }else{
+                        res2 += r;
+                    }
+                }
+                res2 += server.processTask(Arrays.copyOfRange(operationList, start + ((end - start)/server.getQ())*server.getQ(), end));
+//                res2 = server.processTask(Arrays.copyOfRange(operationList, start, end));
                 if (res == res2) {
-                    //System.out.println("  OK");
+//                    System.out.println("  OK");
                     return true;
                 }
-                //System.out.println("");
+//                System.out.println("Faux");
             }
         }
         return false;

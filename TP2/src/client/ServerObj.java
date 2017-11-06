@@ -58,6 +58,11 @@ public class ServerObj {
             this.setResultatPartiel(0);
             for (int i = 0; i < task.length; i++) {
                 this.processLine(task[i]);
+                if(this.getResultatPartiel() == -2){
+                    System.out.println("Serveur "+this.getId() + " ne répond pas");
+                    // Si le serveur est en panne on ne va plus lui faire traiter d'opérations
+                    return -2;
+                }
             }
         }
         return this.getResultatPartiel();
@@ -74,7 +79,10 @@ public class ServerObj {
                 tmpRes += this.getStub().prime(Integer.parseInt(splitLine[1])) % 4000;
             }
         } catch (RemoteException e) {
-            e.printStackTrace();
+            //Ici le serveur n'a pas pu etre contacte, on considere qu'il est tombé en panne.
+            this.setResultatPartiel(-2);
+            return;
+//            e.printStackTrace();
         }
         this.setResultatPartiel(tmpRes + this.getResultatPartiel());
     }

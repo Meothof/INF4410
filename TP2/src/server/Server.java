@@ -91,9 +91,11 @@ public class Server implements ServerInterface {
         Random rnd = new Random();
         float val = rnd.nextFloat();
         if(val < m) {
+//            System.out.println("Serveur malicieux");
             return false;
         }
         else {
+//            System.out.println("Serveur non malicieux");
             return true;
         }
     }

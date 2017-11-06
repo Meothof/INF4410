@@ -21,11 +21,12 @@ import java.util.stream.Stream;
 public class Repartiteur {
 
     private int resultat;
-    private Boolean secure = true;
+    private Boolean secure = false;
     private ArrayList<ServerObj> listServer;
     String operationList[];
 
     public static void main(String[] args) throws IOException {
+        long debut = System.currentTimeMillis();
         Repartiteur rep = new Repartiteur();
         if(args.length == 0){
             System.out.println("Saisissez un argument");
@@ -33,6 +34,8 @@ public class Repartiteur {
         else{
             rep.splitWork(Paths.get(Paths.get("").toAbsolutePath().toString() +"/fichiers/"+ args[0]));
         }
+        System.out.print("Temps execution: ");
+        System.out.println(System.currentTimeMillis()-debut);
     }
 
     public Repartiteur(){
@@ -93,10 +96,12 @@ public class Repartiteur {
                             n = server.getQ();
                         }
                     }
+                    //System.out.println(n+" operations envoyees au serveur "+i);
                     res = server.processTask(Arrays.copyOfRange(operationList, nbOpTraites, nbOpTraites + n));
                     if (!this.secure) {
                         if (!verif(res, i, nbOpTraites, nbOpTraites + n)) {
                             res = -1; //résultat pas fiable -> pas pris en compte
+                            //System.out.println("resultats faux");
                         }
                     }
                     if (res != -1) {
@@ -104,6 +109,7 @@ public class Repartiteur {
                         resultat += res;
                     }
                     else {
+                        //System.out.println("Refus");
                         nbRefus++;
                     }
                 }
@@ -121,11 +127,14 @@ public class Repartiteur {
         int res2 = 0;
         for (int i=0; i<listServer.size(); i++) {
             if (i != s) {
+                //System.out.print("    verification du resultat du serveur "+s+" avec le serveur "+i);
                 server = listServer.get(i);
                 res2 = server.processTask(Arrays.copyOfRange(operationList, start, end));
                 if (res == res2) {
+                    //System.out.println("  OK");
                     return true;
                 }
+                //System.out.println("");
             }
         }
         return false;

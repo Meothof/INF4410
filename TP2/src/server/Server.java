@@ -40,7 +40,7 @@ public class Server implements ServerInterface {
         return q;
     }
 
-    public float getM() {
+    public float getM() throws RemoteException {
         return m;
     }
 
@@ -66,30 +66,23 @@ public class Server implements ServerInterface {
 
     @Override
     public int pell(int x) throws RemoteException{
-        if(resultIsCorrect()) {
+
             return Operations.pell(x);
-        }
-        else {
-            Random rnd = new Random();
-            return rnd.nextInt();
-        }
+
     }
 
     @Override
     public int prime(int x) throws RemoteException{
-        if(resultIsCorrect()) {
+
             return Operations.prime(x);
-        }
-        else {
-            Random rnd = new Random();
-            return rnd.nextInt();
-        }
+
     }
 
     //Retourne si le resultat renvoye sera correct avec la probabilite m.
     public Boolean resultIsCorrect() {
         Random rnd = new Random();
         float val = rnd.nextFloat();
+        System.out.println("m "+ m+" v" +val);
         if(val < m) {
 //            System.out.println("Serveur malicieux");
             return false;

@@ -14,13 +14,18 @@ public class ServerObj {
     private String ip;
     private ServerInterface stub;
     private int q;
+    private float m;
     private int resultatPartiel;
+    private boolean isWorking;
 
     public ServerObj(int id, String ip) {
         this.id = id;
         this.ip = ip;
+        this.m = 0;
         this.stub = loadServerStub(getIp());
         this.resultatPartiel = 0;
+        this.isWorking = true;
+
     }
 
     public ServerInterface loadServerStub(String hostname) {
@@ -29,6 +34,7 @@ public class ServerObj {
             Registry registry = LocateRegistry.getRegistry(hostname, 5031);
             stub = (ServerInterface) registry.lookup("server");
             setQ(stub.getQ());
+            setM(stub.getM());
         } catch (NotBoundException e) {
             System.out.println("Erreur: Le nom '" + e.getMessage() + "' n'est pas défini dans le registre.");
         } catch (AccessException e) {
@@ -58,14 +64,21 @@ public class ServerObj {
             this.setResultatPartiel(0);
             for (int i = 0; i < task.length; i++) {
                 this.processLine(task[i]);
-                if(this.getResultatPartiel() == -2){
-                    System.out.println("Serveur "+this.getId() + " ne répond pas");
+                if(!this.isWorking()){
                     // Si le serveur est en panne on ne va plus lui faire traiter d'opérations
                     return -2;
+//                    break;
                 }
             }
         }
-        return this.getResultatPartiel();
+        if(resultIsCorrect()){
+            return this.getResultatPartiel();
+        }
+        else{
+            Random rnd = new Random();
+            return rnd.nextInt();
+        }
+
     }
 
     public void processLine(String line){
@@ -80,11 +93,22 @@ public class ServerObj {
             }
         } catch (RemoteException e) {
             //Ici le serveur n'a pas pu etre contacte, on considere qu'il est tombé en panne.
-            this.setResultatPartiel(-2);
+            this.setWorking(false);
             return;
-//            e.printStackTrace();
         }
         this.setResultatPartiel(tmpRes + this.getResultatPartiel());
+    }
+
+
+    public Boolean resultIsCorrect() {
+        Random rnd = new Random();
+        float val = rnd.nextFloat();
+        if(val < m) {
+            return false;
+        }
+        else {
+            return true;
+        }
     }
 
     public int getId() {
@@ -125,6 +149,22 @@ public class ServerObj {
 
     public void setResultatPartiel(int resultatPartiel) {
         this.resultatPartiel = resultatPartiel;
+    }
+
+    public void setWorking(boolean working) {
+        isWorking = working;
+    }
+
+    public boolean isWorking() {
+        return isWorking;
+    }
+
+    public float getM() {
+        return m;
+    }
+
+    public void setM(float m) {
+        this.m = m;
     }
 
     @Override

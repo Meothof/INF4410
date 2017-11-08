@@ -178,24 +178,12 @@ public class Repartiteur {
                             }
 
                         }
-
-
                     } else {
                         // Cette partie n'a pas ete exécuté, on le rajoute donc dans la file des taches en attente
                         futuresToFinish.add(future);
                     }
                 }
-
                 futures.clear();
-
-                ArrayList<String> operationRefusees = new ArrayList<>();
-
-//                while(!workChunks.isEmpty()){
-//                    operationRefusees.addAll(workChunks.remove().getChunk());
-//                }
-
-                futures = splitWorkToServers(operationRefusees);
-
                 // On rajoute les taches en attente dans la listes des taches
                 futures.addAll(futuresToFinish);
             }

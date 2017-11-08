@@ -20,7 +20,8 @@ public class Thread implements Callable {
     }
 
     public ProcessedChunk call(){
-        return new ProcessedChunk(this.server.processTask( new ArrayList<String>(operations.subList(start, end))), server.getId(), start, end);
+
+        return new ProcessedChunk(this.server.processTask( new ArrayList<String>(operations.subList(start, end))), server.getId(), start, end, operations);
     }
 
 }

@@ -1,30 +1,20 @@
 package client;
 
+import java.util.ArrayList;
+
 /**
  * Created by thmof on 17-11-07.
  */
 public class WorkChunk {
-    private int start;
-    private int end;
+    private ArrayList<String> chunk;
 
-    public WorkChunk(int start, int end) {
-        this.start = start;
-        this.end = end;
+    public WorkChunk(ArrayList<String> chunk) {
+        this.chunk = chunk;
     }
 
-    public int getStart() {
-        return start;
+    public ArrayList<String> getChunk(){
+        return this.chunk;
     }
 
-    public int getEnd() {
-        return end;
-    }
 
-    @Override
-    public String toString() {
-        return "WorkChunk{" +
-                "start=" + start +
-                ", end=" + end +
-                '}';
-    }
 }

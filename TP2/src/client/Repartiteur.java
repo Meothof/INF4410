@@ -177,18 +177,13 @@ public class Repartiteur {
     private void splitWork(int start, int end){
         int res = 0;
 
-        ArrayList<String> op = (ArrayList<String>) operationList.subList(start, end);
+        ArrayList<String> op = new ArrayList<String>(operationList.subList(start, end));
 
         ArrayList<Future<ProcessedChunk>> futures = new ArrayList<Future<ProcessedChunk>>();
 
         ArrayList<Future<ProcessedChunk>> futuresToFinish = new ArrayList<Future<ProcessedChunk>>();
 
-
-
         futures = splitWorkToServers(op);
-
-
-
 
 
         try {
@@ -214,8 +209,6 @@ public class Repartiteur {
                         } else if (processedChunk.getResult() == -1) {
                             System.out.println("chunk : " + processedChunk.getStart() + ", " + processedChunk.getEnd() + " - refusé par Server: " + processedChunk.getServerId());
                             workChunks.offer(new WorkChunk(processedChunk.getStart(), processedChunk.getEnd()));
-
-
                         } else {
                             if (this.secure) {
 //                                System.out.println("chunk : " + processedChunk.getStart() + ", " + processedChunk.getEnd() + " - accepté par Server: " + processedChunk.getServerId());
@@ -241,7 +234,7 @@ public class Repartiteur {
                 futures.clear();
 
                 ArrayList<String> operationRefusees = new ArrayList<>();
-//                operationRefusees =
+
 
                 for(WorkChunk workChunk: workChunks){
 

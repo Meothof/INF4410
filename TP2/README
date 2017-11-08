@@ -1,10 +1,16 @@
 Pour lancer le calcul sur plusieurs ordinateur il faut :
--Mettre les ip de ces pc dans le fichier server-list
--Se connecter en ssh sur chacun des machines (ssh L4712-xx)
-	- se rendre dans Document/INF4410/TP2/bin 
+
+-Se connecter en ssh sur chacunes des machines (ssh L4712-xx)
+	- se rendre dans la racine du projet (TP2)
+	- cd bin/ 
 	- lancer rmiregistry 5031 &
 
-Par defaut dans le fichier server-list on a 
-L4712-15
-L4712-01
-L4712-02
+
+- Remplir le fichier conf_repartiteur pour configurer le repartiteur .
+
+La premiere ligne correspond au mode de fonctionnement:
+Elle peut prendre deux valeurs:
+- true (mode sécurisé).
+- false (mode non sécurisé)
+
+Les lignes suivantes correspondent à l'adresse IP des machines utilisée (une adresse par ligne).

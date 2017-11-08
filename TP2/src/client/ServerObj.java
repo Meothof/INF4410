@@ -7,6 +7,7 @@ import java.rmi.NotBoundException;
 import java.rmi.RemoteException;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
+import java.util.ArrayList;
 import java.util.Random;
 
 public class ServerObj {
@@ -53,15 +54,15 @@ public class ServerObj {
         return true;
     }
 
-    public int processTask(String task[]) {
+    public int processTask(ArrayList<String> tasks) {
         int resultTask = 0;
-        boolean taskRefused = refuseTask(task.length);
+        boolean taskRefused = refuseTask(tasks.size());
         if (taskRefused) {
             return -1;
         }
         else {
-            for (int i = 0; i < task.length; i++) {
-                resultTask += this.processLine(task[i]);
+            for (String task : tasks ){
+                resultTask += this.processLine(task);
                 if(!this.isWorking()){
                     // Si le serveur est en panne on ne va plus lui faire traiter d'opérations
                     return -2;

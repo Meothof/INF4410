@@ -12,6 +12,9 @@ import java.util.*;
 import java.util.concurrent.*;
 import java.util.stream.Stream;
 
+import static java.util.Arrays.copyOfRange;
+import static java.util.Arrays.stream;
+
 /* TODO
     Gerer le taux de refus : OK
     Gerer le cas de la panne ou un serveur est interrompu
@@ -24,7 +27,7 @@ public class Repartiteur {
     private Boolean secure = true;
     private ArrayList<ServerObj> listServer;
     private Queue<WorkChunk> workChunks;
-    String operationList[];
+    private ArrayList<String> operationList;
 
     public static void main(String[] args) throws IOException {
         long debut = System.currentTimeMillis();
@@ -34,10 +37,17 @@ public class Repartiteur {
         }
         else{
             try{
-                List<String> lines = Files.readAllLines(Paths.get(Paths.get("").toAbsolutePath().toString() +"/fichiers/"+ args[0]));
-                rep.operationList = lines.toArray(new String[lines.size()]);
-                rep.workChunks.offer(new WorkChunk(0, lines.size()));
-//                rep.splitWork(rep.operationList);
+//                List<String> lines = Files.readAllLines(Paths.get(Paths.get("").toAbsolutePath().toString() +"/fichiers/"+ args[0]));
+
+
+//                Path path = Paths.get();
+                File file = new File(Paths.get("").toAbsolutePath().toString() +"/fichiers/"+ args[0]);
+                Scanner scan = new Scanner(file);
+                while (scan.hasNextLine()){
+                    rep.operationList.add( scan.nextLine() );
+                }
+                scan.close();
+                rep.workChunks.offer(new WorkChunk(0, rep.operationList.size()));
                 rep.processQueue();
             }
             catch(IOException e){
@@ -53,6 +63,7 @@ public class Repartiteur {
 
     public Repartiteur(){
         resultat = 0;
+        this.operationList = new ArrayList<String>();
 
         workChunks = new ArrayDeque<WorkChunk>();
         if (System.getSecurityManager() == null) {
@@ -93,7 +104,7 @@ public class Repartiteur {
             tmpChunk = workChunks.remove();
             System.out.println("Itération: "+ count++);
             System.out.println("Nouvel itération sur  "+ tmpChunk.getStart()+", "+tmpChunk.getEnd());
-            this.splitWork(Arrays.copyOfRange(operationList, tmpChunk.getStart(), tmpChunk.getEnd()));
+            this.splitWork(tmpChunk.getStart(), tmpChunk.getEnd());
             resultat = resultat%4000;
         }
 
@@ -163,24 +174,28 @@ public class Repartiteur {
             }
     }
 */
-    private void splitWork(String[] op){
+    private void splitWork(int start, int end){
         int res = 0;
+
+        ArrayList<String> op = (ArrayList<String>) operationList.subList(start, end);
 
         ArrayList<Future<ProcessedChunk>> futures = new ArrayList<Future<ProcessedChunk>>();
 
-
         ArrayList<Future<ProcessedChunk>> futuresToFinish = new ArrayList<Future<ProcessedChunk>>();
+
+
 
         futures = splitWorkToServers(op);
 
 
 
-        ProcessedChunk processedChunk = null;
+
 
         try {
             while(!futures.isEmpty()) {
                 futuresToFinish.clear();
                 for (Future<ProcessedChunk> future : futures) {
+                    ProcessedChunk processedChunk = null;
 
                     if (future.isDone()) {
 
@@ -200,17 +215,18 @@ public class Repartiteur {
                             System.out.println("chunk : " + processedChunk.getStart() + ", " + processedChunk.getEnd() + " - refusé par Server: " + processedChunk.getServerId());
                             workChunks.offer(new WorkChunk(processedChunk.getStart(), processedChunk.getEnd()));
 
+
                         } else {
                             if (this.secure) {
-                                System.out.println("chunk : " + processedChunk.getStart() + ", " + processedChunk.getEnd() + " - accepté par Server: " + processedChunk.getServerId());
+//                                System.out.println("chunk : " + processedChunk.getStart() + ", " + processedChunk.getEnd() + " - accepté par Server: " + processedChunk.getServerId());
                                 resultat += processedChunk.getResult();
                             } else {
 
-                                if (!verif(op, processedChunk.getResult(), processedChunk.getServerId(), processedChunk.getStart(), processedChunk.getEnd())) {
-                                    workChunks.offer(new WorkChunk(processedChunk.getStart(), processedChunk.getEnd()));
-                                } else {
-                                    resultat += processedChunk.getResult();
-                                }
+//                                if (!verif(op, processedChunk.getResult(), processedChunk.getServerId(), processedChunk.getStart(), processedChunk.getEnd())) {
+//                                    workChunks.offer(new WorkChunk(processedChunk.getStart(), processedChunk.getEnd()));
+//                                } else {
+//                                    resultat += processedChunk.getResult();
+//                                }
                             }
 
                         }
@@ -223,6 +239,14 @@ public class Repartiteur {
                 }
 
                 futures.clear();
+
+                ArrayList<String> operationRefusees = new ArrayList<>();
+//                operationRefusees =
+
+                for(WorkChunk workChunk: workChunks){
+
+                }
+
                 futures.addAll(futuresToFinish);
             }
 
@@ -236,12 +260,12 @@ public class Repartiteur {
     }
 
 
-    private ArrayList<Future<ProcessedChunk>> splitWorkToServers(String[] op){
+    private ArrayList<Future<ProcessedChunk>> splitWorkToServers(ArrayList<String> op){
         ArrayList<Future<ProcessedChunk>> futures = new ArrayList<Future<ProcessedChunk>>();
 
         ExecutorService executor = Executors.newFixedThreadPool(4);
 
-        int nbOpTotal = op.length;
+        int nbOpTotal = op.size();
 //            System.out.println("Nombre d'opérations à traiter : "+nbOpTotal);
         int nbOpTraites = 0;
         int n = 0;
@@ -262,15 +286,17 @@ public class Repartiteur {
 //                System.out.println("thread : "+i+ " chunk : "+nbOpTraites + ", "+(nbOpTraites+n));
 
                 //Creation d'un callable Thread pour le serveur i avec le bon nombre d'operations
-                Callable<ProcessedChunk> thread = new Thread(nbOpTraites, nbOpTraites +n, op, server);
+                if(n!=0) {
+                    Callable<ProcessedChunk> thread = new Thread(nbOpTraites, nbOpTraites + n, op, server);
 
 
-                //Recuperation du resultat retourné par le serveur.
-                Future<ProcessedChunk> future = executor.submit(thread);
+                    //Recuperation du resultat retourné par le serveur.
+                    Future<ProcessedChunk> future = executor.submit(thread);
 
-                futures.add(future);
+                    futures.add(future);
 
-                nbOpTraites += n;
+                    nbOpTraites += n;
+                }
 
             }
         }
@@ -280,7 +306,7 @@ public class Repartiteur {
     }
 
 
-    private boolean verif(String[] op, int res, int s, int start, int end) {
+    private boolean verif(ArrayList<String> op, int res, int s, int start, int end) {
 
         ArrayList<Future<ProcessedChunk>> futures = new ArrayList<Future<ProcessedChunk>>();
 

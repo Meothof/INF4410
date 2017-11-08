@@ -66,14 +66,14 @@ public class Server implements ServerInterface {
 
     @Override
     public int pell(int x) throws RemoteException{
-
+//        System.out.println("pell "+x);
             return Operations.pell(x);
 
     }
 
     @Override
     public int prime(int x) throws RemoteException{
-
+//            System.out.println("prime "+x);
             return Operations.prime(x);
 
     }

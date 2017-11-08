@@ -15,7 +15,6 @@ public class ServerObj {
     private ServerInterface stub;
     private int q;
     private float m;
-    private int resultatPartiel;
     private boolean isWorking;
 
     public ServerObj(int id, String ip) {
@@ -23,7 +22,6 @@ public class ServerObj {
         this.ip = ip;
         this.m = 0;
         this.stub = loadServerStub(getIp());
-        this.resultatPartiel = 0;
         this.isWorking = true;
 
     }
@@ -56,23 +54,23 @@ public class ServerObj {
     }
 
     public int processTask(String task[]) {
+        int resultTask = 0;
         boolean taskRefused = refuseTask(task.length);
         if (taskRefused) {
             return -1;
         }
         else {
-            this.setResultatPartiel(0);
             for (int i = 0; i < task.length; i++) {
-                this.processLine(task[i]);
+                resultTask += this.processLine(task[i]);
                 if(!this.isWorking()){
                     // Si le serveur est en panne on ne va plus lui faire traiter d'opérations
                     return -2;
-//                    break;
+
                 }
             }
         }
         if(resultIsCorrect()){
-            return this.getResultatPartiel();
+            return resultTask;
         }
         else{
             Random rnd = new Random();
@@ -81,22 +79,22 @@ public class ServerObj {
 
     }
 
-    public void processLine(String line){
-        int tmpRes = 0;
+    public int processLine(String line){
+        int resultLine = 0;
         String[] splitLine = line.split("\\s+");
         try {
             if(splitLine[0].equals("pell")){
-                tmpRes += this.getStub().pell(Integer.parseInt(splitLine[1])) % 4000;
+                resultLine += this.getStub().pell(Integer.parseInt(splitLine[1])) % 4000;
             }
             else if(splitLine[0].equals("prime")){
-                tmpRes += this.getStub().prime(Integer.parseInt(splitLine[1])) % 4000;
+                resultLine += this.getStub().prime(Integer.parseInt(splitLine[1])) % 4000;
             }
         } catch (RemoteException e) {
             //Ici le serveur n'a pas pu etre contacte, on considere qu'il est tombé en panne.
             this.setWorking(false);
-            return;
+            return -2;
         }
-        this.setResultatPartiel(tmpRes + this.getResultatPartiel());
+        return resultLine;
     }
 
 
@@ -141,14 +139,6 @@ public class ServerObj {
 
     public void setQ(int q) {
         this.q = q;
-    }
-
-    public int getResultatPartiel() {
-        return resultatPartiel;
-    }
-
-    public void setResultatPartiel(int resultatPartiel) {
-        this.resultatPartiel = resultatPartiel;
     }
 
     public void setWorking(boolean working) {

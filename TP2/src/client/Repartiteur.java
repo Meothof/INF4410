@@ -1,5 +1,6 @@
 package client;
 
+import server.Server;
 import shared.ServerInterface;
 
 import java.io.*;
@@ -8,6 +9,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.rmi.RemoteException;
 import java.util.*;
+import java.util.concurrent.*;
 import java.util.stream.Stream;
 
 /* TODO
@@ -19,7 +21,7 @@ import java.util.stream.Stream;
 public class Repartiteur {
 
     private int resultat;
-    private Boolean secure = true;
+    private Boolean secure = false;
     private ArrayList<ServerObj> listServer;
     private Queue<WorkChunk> workChunks;
     String operationList[];
@@ -43,8 +45,10 @@ public class Repartiteur {
             }
 
         }
+        System.out.println("Résultat : " + (rep.resultat));
         System.out.print("Temps execution: ");
         System.out.println(System.currentTimeMillis()-debut);
+        System.exit(0);
     }
 
     public Repartiteur(){
@@ -79,18 +83,25 @@ public class Repartiteur {
         }
     }
 
+
+
     private void processQueue(){
+        int count = 0;
         WorkChunk tmpChunk = null;
         while(!workChunks.isEmpty()){
             tmpChunk = workChunks.remove();
-            splitWork(Arrays.copyOfRange(operationList, tmpChunk.getStart(), tmpChunk.getEnd()));
+            System.out.println("Itération: "+ count++);
+            System.out.println("Nouvel itération sur  "+ tmpChunk.getStart()+", "+tmpChunk.getEnd());
+            this.splitWork(Arrays.copyOfRange(operationList, tmpChunk.getStart(), tmpChunk.getEnd()));
+            resultat = resultat%4000;
         }
-        System.out.println("Résultat : " + (resultat%4000));
+
     }
 
     /*
      * Répartition du travail de manière à maximiser la taille des tâches envoyées sans recevoir trop de refus (10%)
      */
+    /*
     private void splitWork(String[] op) {
             int nbOpTotal = op.length;
 //            System.out.println("Nombre d'opérations à traiter : "+nbOpTotal);
@@ -149,10 +160,117 @@ public class Repartiteur {
                     }
                 }
             }
+    }
+*/
+    private void splitWork(String[] op){
+        int res = 0;
+
+        ArrayList<Future<ProcessedChunk>> futures = new ArrayList<Future<ProcessedChunk>>();
+
+        futures = splitWorkToServers(op);
+
+        ProcessedChunk processedChunk = null;
+
+        try {
+            for(Future<ProcessedChunk> future : futures){
+                while(!future.isDone()){
+
+                }
+                if(future.isDone()){
+
+                    processedChunk = future.get();
+//                    System.out.println(processedChunk.toString());
+
+                    if(processedChunk.getResult() == -2){ //le serveur est tombé en panne
+                        System.out.println("Panne du serveur"+ processedChunk.getServerId());
+
+                        //On supprime le serveur de notre liste
+                        listServer.remove(getServerById(processedChunk.getServerId()));
+
+                        //On rajoute la partie non traitee dans la queue de traitement
+                        workChunks.offer(new WorkChunk(processedChunk.getStart(), processedChunk.getEnd()));
+
+                    }
+                    else if(processedChunk.getResult() == -1){
+                        System.out.println("chunk : "+ processedChunk.getStart()+ ", "+ processedChunk.getEnd() + " - refusé par Server: "+processedChunk.getServerId() );
+                        workChunks.offer(new WorkChunk(processedChunk.getStart(), processedChunk.getEnd()));
+
+                    }
+                    else {
+                        if(this.secure){
+                            System.out.println("chunk : "+ processedChunk.getStart()+ ", "+ processedChunk.getEnd() + " - accepté par Server: "+processedChunk.getServerId() );
+                            resultat += processedChunk.getResult();
+                        }else{
+                            if(!verif(op, processedChunk.getResult(), processedChunk.getServerId(), processedChunk.getStart(), processedChunk.getEnd())){
+                                workChunks.offer(new WorkChunk(processedChunk.getStart(), processedChunk.getEnd()));
+                            }
+                            else{
+                                resultat += processedChunk.getResult();
+                            }
+                        }
+
+                    }
 
 
+                }
+                else{
+                    System.out.println("future is not done");
+                }
+            }
+
+            futures.clear();
 
 
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        } catch (ExecutionException e) {
+            e.printStackTrace();
+        }
+
+    }
+
+
+    private ArrayList<Future<ProcessedChunk>> splitWorkToServers(String[] op){
+        ArrayList<Future<ProcessedChunk>> futures = new ArrayList<Future<ProcessedChunk>>();
+
+        ExecutorService executor = Executors.newFixedThreadPool(4);
+
+        int nbOpTotal = op.length;
+//            System.out.println("Nombre d'opérations à traiter : "+nbOpTotal);
+        int nbOpTraites = 0;
+        int n = 0;
+        ServerObj server = null;
+        while (nbOpTraites < nbOpTotal) {
+            for (int i = 0; i < listServer.size(); i++) {
+                //System.out.println(nbOpTraites);
+                server = listServer.get(i);
+                if ((nbOpTotal - nbOpTraites) < server.getQ()) {
+                    n = nbOpTotal - nbOpTraites;
+                } else {
+                    n = (int) Math.floor(1.5 * (float) (server.getQ())); //pour un taux de refus de 10%
+                    if (n > (nbOpTotal - nbOpTraites)) {
+                        n = server.getQ();
+                    }
+                }
+
+//                System.out.println("thread : "+i+ " chunk : "+nbOpTraites + ", "+(nbOpTraites+n));
+
+                //Creation d'un callable Thread pour le serveur i avec le bon nombre d'operations
+                Callable<ProcessedChunk> thread = new Thread(nbOpTraites, nbOpTraites +n, op, server);
+
+
+                //Recuperation du resultat retourné par le serveur.
+                Future<ProcessedChunk> future = executor.submit(thread);
+
+                futures.add(future);
+
+                nbOpTraites += n;
+
+            }
+        }
+
+        executor.shutdown();
+        return futures;
     }
 
 
@@ -161,7 +279,7 @@ public class Repartiteur {
         int res2 = 0;
         for (int i=0; i<listServer.size(); i++) {
             if (i != s) {
-//                System.out.println("    verification du resultat du serveur "+s+" avec le serveur "+i);
+                System.out.println("    verification du resultat du serveur "+s+" avec le serveur "+i);
                 server = listServer.get(i);
 
                 //Si le serveur de verification a une plus petite capacite que le serveur initial, on decoupe lintervalle de maniere adequat
@@ -184,6 +302,16 @@ public class Repartiteur {
             }
         }
         return false;
+    }
+
+
+    private ServerObj getServerById(int id){
+        for(ServerObj server : listServer){
+            if (server.getId() == id){
+                return server;
+            }
+        }
+        return null;
     }
 
     @Override

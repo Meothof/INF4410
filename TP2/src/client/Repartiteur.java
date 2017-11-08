@@ -21,7 +21,7 @@ import java.util.stream.Stream;
 public class Repartiteur {
 
     private int resultat;
-    private Boolean secure = false;
+    private Boolean secure = true;
     private ArrayList<ServerObj> listServer;
     private Queue<WorkChunk> workChunks;
     String operationList[];
@@ -53,6 +53,7 @@ public class Repartiteur {
 
     public Repartiteur(){
         resultat = 0;
+
         workChunks = new ArrayDeque<WorkChunk>();
         if (System.getSecurityManager() == null) {
             System.setSecurityManager(new SecurityManager());
@@ -167,58 +168,63 @@ public class Repartiteur {
 
         ArrayList<Future<ProcessedChunk>> futures = new ArrayList<Future<ProcessedChunk>>();
 
+
+        ArrayList<Future<ProcessedChunk>> futuresToFinish = new ArrayList<Future<ProcessedChunk>>();
+
         futures = splitWorkToServers(op);
+
+
 
         ProcessedChunk processedChunk = null;
 
         try {
-            for(Future<ProcessedChunk> future : futures){
-                while(!future.isDone()){
+            while(!futures.isEmpty()) {
+                futuresToFinish.clear();
+                for (Future<ProcessedChunk> future : futures) {
 
-                }
-                if(future.isDone()){
+                    if (future.isDone()) {
 
-                    processedChunk = future.get();
+                        processedChunk = future.get();
 //                    System.out.println(processedChunk.toString());
 
-                    if(processedChunk.getResult() == -2){ //le serveur est tombé en panne
-                        System.out.println("Panne du serveur"+ processedChunk.getServerId());
+                        if (processedChunk.getResult() == -2) { //le serveur est tombé en panne
+                            System.out.println("Panne du serveur" + processedChunk.getServerId());
 
-                        //On supprime le serveur de notre liste
-                        listServer.remove(getServerById(processedChunk.getServerId()));
+                            //On supprime le serveur de notre liste
+                            listServer.remove(getServerById(processedChunk.getServerId()));
 
-                        //On rajoute la partie non traitee dans la queue de traitement
-                        workChunks.offer(new WorkChunk(processedChunk.getStart(), processedChunk.getEnd()));
+                            //On rajoute la partie non traitee dans la queue de traitement
+                            workChunks.offer(new WorkChunk(processedChunk.getStart(), processedChunk.getEnd()));
 
-                    }
-                    else if(processedChunk.getResult() == -1){
-                        System.out.println("chunk : "+ processedChunk.getStart()+ ", "+ processedChunk.getEnd() + " - refusé par Server: "+processedChunk.getServerId() );
-                        workChunks.offer(new WorkChunk(processedChunk.getStart(), processedChunk.getEnd()));
+                        } else if (processedChunk.getResult() == -1) {
+                            System.out.println("chunk : " + processedChunk.getStart() + ", " + processedChunk.getEnd() + " - refusé par Server: " + processedChunk.getServerId());
+                            workChunks.offer(new WorkChunk(processedChunk.getStart(), processedChunk.getEnd()));
 
-                    }
-                    else {
-                        if(this.secure){
-                            System.out.println("chunk : "+ processedChunk.getStart()+ ", "+ processedChunk.getEnd() + " - accepté par Server: "+processedChunk.getServerId() );
-                            resultat += processedChunk.getResult();
-                        }else{
-                            if(!verif(op, processedChunk.getResult(), processedChunk.getServerId(), processedChunk.getStart(), processedChunk.getEnd())){
-                                workChunks.offer(new WorkChunk(processedChunk.getStart(), processedChunk.getEnd()));
-                            }
-                            else{
+                        } else {
+                            if (this.secure) {
+                                System.out.println("chunk : " + processedChunk.getStart() + ", " + processedChunk.getEnd() + " - accepté par Server: " + processedChunk.getServerId());
                                 resultat += processedChunk.getResult();
+                            } else {
+
+                                if (!verif(op, processedChunk.getResult(), processedChunk.getServerId(), processedChunk.getStart(), processedChunk.getEnd())) {
+                                    workChunks.offer(new WorkChunk(processedChunk.getStart(), processedChunk.getEnd()));
+                                } else {
+                                    resultat += processedChunk.getResult();
+                                }
                             }
+
                         }
 
+
+                    } else {
+                        futuresToFinish.add(future);
+//                        System.out.println("future is not done");
                     }
-
-
                 }
-                else{
-                    System.out.println("future is not done");
-                }
+
+                futures.clear();
+                futures.addAll(futuresToFinish);
             }
-
-            futures.clear();
 
 
         } catch (InterruptedException e) {
@@ -275,32 +281,78 @@ public class Repartiteur {
 
 
     private boolean verif(String[] op, int res, int s, int start, int end) {
+
+        ArrayList<Future<ProcessedChunk>> futures = new ArrayList<Future<ProcessedChunk>>();
+
+        ExecutorService executor = Executors.newFixedThreadPool(4);
+
         ServerObj server = null;
         int res2 = 0;
         for (int i=0; i<listServer.size(); i++) {
             if (i != s) {
-                System.out.println("    verification du resultat du serveur "+s+" avec le serveur "+i);
+//                System.out.println("    verification du resultat du serveur "+s+" avec le serveur "+i);
                 server = listServer.get(i);
 
                 //Si le serveur de verification a une plus petite capacite que le serveur initial, on decoupe lintervalle de maniere adequat
                 int n_chunk = (end - start)/server.getQ();
                 int r = 0;
                 for(int j = 0; j < n_chunk; j++){
-                    r = server.processTask(Arrays.copyOfRange(op, start + j*server.getQ(), start + (j+1)*server.getQ()));
-                    if(!server.isWorking()){
+//                    r = server.processTask(Arrays.copyOfRange(op, start + j*server.getQ(), start + (j+1)*server.getQ()));
+
+                    //Creation d'un callable Thread pour le serveur i avec le bon nombre d'operations
+                    Callable<ProcessedChunk> thread = new Thread(start + j*server.getQ(), start + (j+1)*server.getQ(), op, server);
+
+
+                    //Recuperation du resultat retourné par le serveur.
+                    Future<ProcessedChunk> future = executor.submit(thread);
+
+                    futures.add(future);
+
+
+//                    if(!server.isWorking()){
 //                        listServer.remove(server);
 //                        verif(op, res, s, start, end);
-                        break;
-                    }else{
-                        res2 += r;
-                    }
+//                        break;
+//                    }else{
+//                        res2 += r;
+//                    }
                 }
-                res2 += server.processTask(Arrays.copyOfRange(op, start + ((end - start)/server.getQ())*server.getQ(), end));
-                if (res == res2) {
+
+                //Creation d'un callable Thread pour le serveur i avec le bon nombre d'operations
+                Callable<ProcessedChunk> thread = new Thread(start + ((end - start)/server.getQ())*server.getQ(), end, op, server);
+
+
+                //Recuperation du resultat retourné par le serveur.
+                Future<ProcessedChunk> future = executor.submit(thread);
+
+                futures.add(future);
+
+
+
+
+                for(Future<ProcessedChunk> f : futures){
+                    try {
+                        ProcessedChunk processedChunk = null;
+                        while(!f.isDone()){}
+
+                        processedChunk = f.get();
+                        res2 += processedChunk.getResult();
+
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    } catch (ExecutionException e) {
+                        e.printStackTrace();
+                    }
+
+                }
+                if (res2 == res) {
+//                    System.out.println("Résultat du serveur "+ s +" vérifié par le serveur "+server.getId());
                     return true;
                 }
+
             }
         }
+//        System.out.println("Résultat du serveur "+ s +" invalidé");
         return false;
     }
 

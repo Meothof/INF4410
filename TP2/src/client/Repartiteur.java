@@ -166,11 +166,16 @@ public class Repartiteur {
                                 resultat += processedChunk.getResult();
                             } else {
 
-                                if (!verif(processedChunk.getOperations(), processedChunk.getResult(), processedChunk.getServerId())) {
-//                                    System.out.println("Le serveur "+processedChunk.getServerId() + " a renvoye une erreur");
-                                    workChunks.offer(new WorkChunk(processedChunk.getOperations()));
-                                } else {
-                                    resultat += processedChunk.getResult();
+                                if(listServer.size()>=2) {
+                                    if (!verif(processedChunk.getOperations(), processedChunk.getResult(), processedChunk.getServerId())) {
+                                        //                                    System.out.println("Le serveur "+processedChunk.getServerId() + " a renvoye une erreur");
+                                        workChunks.offer(new WorkChunk(processedChunk.getOperations()));
+                                    } else {
+                                        resultat += processedChunk.getResult();
+                                    }
+                                }else{
+                                    System.out.println("nombre de serveur insuffisant");
+                                    System.exit(0);
                                 }
                             }
 
@@ -243,12 +248,12 @@ public class Repartiteur {
 
         ExecutorService executor = Executors.newFixedThreadPool(listServer.size());
 
-        ServerObj server = null;
+//        ServerObj server = null;
         int res2 = 0;
-        for (int i=0; i<listServer.size(); i++) {
-            if (i != s) {
+        for (ServerObj server : listServer) {
+            if (server.getId() != s) {
 //                System.out.println("    verification du resultat du serveur "+s+" avec le serveur "+i);
-                server = listServer.get(i);
+//                server = listServer.get(i);
 
                 //Si le serveur de verification a une plus petite capacite que le serveur initial, on decoupe lintervalle de maniere adequat
                 int n_chunk = op.size()/server.getQ();

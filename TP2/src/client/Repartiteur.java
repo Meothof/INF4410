@@ -166,17 +166,16 @@ public class Repartiteur {
                             future.cancel(true);
 
 
-                        } else if (processedChunk.getResult() == -1) { //La tache à ete refusée par le serveur
+                        } else if (processedChunk.getResult() == -1) { //La tache a été refusée par le serveur
                             workChunks.offer(new WorkChunk(new ArrayList<String>(op.subList(processedChunk.getStart(),processedChunk.getEnd()))));
                         } else {
                             if (this.secure) {
-                                //En mode securise, on admet que le resultat renvoye par le serveur est valide.
+                                //En mode securise, on admet que le resultat renvoyé par le serveur est valide.
                                 resultat += processedChunk.getResult();
                             } else {
 
                                 if(listServer.size()>=2) {
                                     if (!verif(processedChunk.getOperations(), processedChunk.getResult(), processedChunk.getServerId())) {
-                                        //                                    System.out.println("Le serveur "+processedChunk.getServerId() + " a renvoye une erreur");
                                         workChunks.offer(new WorkChunk(processedChunk.getOperations()));
                                     } else {
                                         resultat += processedChunk.getResult();

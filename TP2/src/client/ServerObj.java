@@ -54,6 +54,9 @@ public class ServerObj {
         return true;
     }
 
+    /*
+     * Renvoi le résultat pour un ensemble d'opération
+     */
     public int processTask(ArrayList<String> tasks) {
         int resultTask = 0;
         boolean taskRefused = refuseTask(tasks.size());
@@ -80,6 +83,9 @@ public class ServerObj {
 
     }
 
+    /*
+     * Traite une ligne d'opération
+     */
     public int processLine(String line){
         int resultLine = 0;
         String[] splitLine = line.split("\\s+");
@@ -91,7 +97,7 @@ public class ServerObj {
                 resultLine += this.getStub().prime(Integer.parseInt(splitLine[1])) % 4000;
             }
         } catch (RemoteException e) {
-            //Ici le serveur n'a pas pu etre contacte, on considere qu'il est tombé en panne.
+            //Ici le serveur n'a pas pu etre contacté, on considère qu'il est tombé en panne.
             this.setWorking(false);
             return -2;
         }

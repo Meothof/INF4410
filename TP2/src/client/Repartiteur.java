@@ -38,6 +38,7 @@ public class Repartiteur {
         }
         else{
             try{
+                //Lecture initial du fichier d'opérations
                 File file = new File(Paths.get("").toAbsolutePath().toString() +"/fichiers/"+ args[0]);
                 Scanner scan = new Scanner(file);
                 while (scan.hasNextLine()){
@@ -70,6 +71,7 @@ public class Repartiteur {
         listServer = new ArrayList<>();
         int i = 0;
         try {
+            // Configuration du répartiteur
             File file = new File(Paths.get("").toAbsolutePath().toString() +"/conf_repartiteur");
             Scanner scan = new Scanner(file);
             if(scan.hasNext()){
@@ -93,8 +95,8 @@ public class Repartiteur {
     }
 
     /*
-    * Display informations of connected server
-    */
+     * Affiche les informations ddes différents serveurs connectés
+     */
     private void showServer() {
         for(ServerObj server : listServer){
             System.out.println("*** server "+server.getId()+" ***");
@@ -105,7 +107,9 @@ public class Repartiteur {
     }
 
 
-
+    /*
+     * Re-itère l'opération tant que la queue de travail n'est pas vide
+     */
     private void processQueue(){
         int count = 0;
         WorkChunk tmpChunk = null;
@@ -123,6 +127,9 @@ public class Repartiteur {
     }
 
 
+    /*
+     * Envoi les opération au serveur, recupère les résultats, et replace les opérations non traités dans la queue
+     */
     private void splitWork(ArrayList<String> op){
         int res = 0;
 
@@ -130,6 +137,7 @@ public class Repartiteur {
 
         ArrayList<Future<ProcessedChunk>> futuresToFinish = new ArrayList<Future<ProcessedChunk>>();
 
+        // Récupération des résultats partiels renvoyés par les serveurs
         futures = splitWorkToServers(op);
 
 
@@ -152,13 +160,13 @@ public class Repartiteur {
                             //On supprime le serveur de notre liste
                             listServer.remove(getServerById(processedChunk.getServerId()));
 
-                            //On rajoute la partie non traitee dans la queue de traitement
+                            //On rajoute la partie non traitée dans la queue de traitement
                             workChunks.offer(new WorkChunk(new ArrayList<String>(op.subList(processedChunk.getStart(),processedChunk.getEnd()))));
 
                             future.cancel(true);
 
 
-                        } else if (processedChunk.getResult() == -1) { //La tache a ete refusee par le serveur
+                        } else if (processedChunk.getResult() == -1) { //La tache à ete refusée par le serveur
                             workChunks.offer(new WorkChunk(new ArrayList<String>(op.subList(processedChunk.getStart(),processedChunk.getEnd()))));
                         } else {
                             if (this.secure) {
@@ -200,6 +208,9 @@ public class Repartiteur {
     }
 
 
+    /*
+     * Repartie les opérations op entre les différents serveur de manière non-bloquante
+     */
     private ArrayList<Future<ProcessedChunk>> splitWorkToServers(ArrayList<String> op){
         ArrayList<Future<ProcessedChunk>> futures = new ArrayList<Future<ProcessedChunk>>();
 
@@ -226,7 +237,7 @@ public class Repartiteur {
                 if(n!=0) {
                     Callable<ProcessedChunk> thread = new Thread(nbOpTraites, nbOpTraites + n, op, server);
 
-                    //Recuperation du resultat retourné par le serveur.
+                    //Récuperation du resultat retourné par le serveur.
                     Future<ProcessedChunk> future = executor.submit(thread);
 
                     futures.add(future);
@@ -242,31 +253,30 @@ public class Repartiteur {
     }
 
 
+    /*
+     * Vérifie si au moins un des serveur à un resultats différent pour les opérations op que le serveur s
+     */
     private boolean verif(ArrayList<String> op, int res, int s) {
 
         ArrayList<Future<ProcessedChunk>> futures = new ArrayList<Future<ProcessedChunk>>();
 
         ExecutorService executor = Executors.newFixedThreadPool(listServer.size());
 
-//        ServerObj server = null;
         int res2 = 0;
         for (ServerObj server : listServer) {
             if (server.getId() != s) {
-//                System.out.println("    verification du resultat du serveur "+s+" avec le serveur "+i);
-//                server = listServer.get(i);
 
-                //Si le serveur de verification a une plus petite capacite que le serveur initial, on decoupe lintervalle de maniere adequat
+
+                //Si le serveur de vérification a une plus petite capacité que le serveur initial, on découpe l'intervalle de manière adequat
                 int n_chunk = op.size()/server.getQ();
                 int r = 0;
 
                 for(int j = 0; j < n_chunk; j++){
-//                    r = server.processTask(Arrays.copyOfRange(op, start + j*server.getQ(), start + (j+1)*server.getQ()));
 
-                    //Creation d'un callable Thread pour le serveur i avec le bon nombre d'operations
+                    //Création d'un callable Thread pour le serveur i avec le bon nombre d'opérations
                     Callable<ProcessedChunk> thread = new Thread(j*server.getQ(),  + (j+1)*server.getQ(), op, server);
 
-
-                    //Recuperation du resultat retourné par le serveur.
+                    //Recuperation du résultat retourné par le serveur.
                     Future<ProcessedChunk> future = executor.submit(thread);
 
                     futures.add(future);
@@ -274,11 +284,11 @@ public class Repartiteur {
 
                 }
 
-                //Creation d'un callable Thread pour le serveur i avec le bon nombre d'operations
+                //Création d'un callable Thread pour le serveur i avec le bon nombre d'operations
                 Callable<ProcessedChunk> thread = new Thread( (op.size()/server.getQ())*server.getQ(), op.size(), op, server);
 
 
-                //Recuperation du resultat retourné par le serveur.
+                //Récuperation du resultat retourné par le serveur.
                 Future<ProcessedChunk> future = executor.submit(thread);
 
                 futures.add(future);
@@ -287,7 +297,7 @@ public class Repartiteur {
 
 
         }
-        // Recuperation des resultats des differents serveurs
+        // Récuperation des résultats des différents serveurs
         for(ServerObj serverObj : listServer){
             if(s!=serverObj.getId()) {
 
@@ -299,7 +309,8 @@ public class Repartiteur {
                             if (future.isDone()) {
                                 processedChunk = future.get();
                                 if (serverObj.getId() == processedChunk.getServerId()) {
-                                    if(res == -2){
+                                    if(res == -2){ //Le serveur est tombé en panne
+                                        // On abandonne ce résultat
                                         continue;
                                     }
                                     else{
@@ -320,17 +331,18 @@ public class Repartiteur {
                     futures.addAll(nextFutures);
                 }
                 if (res2 == res) {
-                    // Le resultat du serveur a ete valide par un autre serveur
+                    // Le résultat du serveur a été valide par un autre serveur
                     return true;
                 }
                 else{
                     if (res2 == -2){
+                        // Le serveur est tombé en panne
                         continue;
                     }
                 }
             }
         }
-        // Le resultat n'a pas ete valide par les autres serveur
+        // Le resultat n'a pas été valide par les autres serveur
         return false;
     }
 

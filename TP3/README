@@ -1,0 +1,8 @@
+commandes :
+wget https://raw.githubusercontent.com/houssemmh/INF4410-TP3/master/server.py
+chmod u+x server.py
+python server.py
+
+openstack passwd
+INF4410-18
+yP8t4ii43

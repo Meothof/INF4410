@@ -5,6 +5,11 @@ description: >
 
 parameters:
 
+  key_name:
+    type: string
+    description: Name of an existing key pair to use for the server
+    constraints:
+      - custom_constraint: nova.keypair
   flavor:
     type: string
     description: Flavor utilisee par les serveurs
@@ -17,7 +22,7 @@ parameters:
   net_id:
     type: string
     label: networks
-    default: reseau-pour-tous
+    default: inf4410-net
 
 
 
@@ -32,7 +37,7 @@ resources:
                     key_name: { get_param: key_name }
                     image: { get_param: image }
                     flavor: { get_param: flavor }
-                    admin_pass: { get_param: admin_pass }
+                    admin_pass: admin
                     user_data_format: RAW
                     networks:
                         - network: { get_param: net_id }
@@ -41,7 +46,7 @@ resources:
                             template: |
                                 #!/bin/bash
                                 wget https://raw.githubusercontent.com/houssemmh/INF4410-TP3/master/server.py
-                                python server.py
+                                python server.py &
                             params:
                                 param1: 'string'
                         
@@ -50,7 +55,7 @@ resources:
         properties:
             protocol: HTTP
             monitors: [{get_resource: monitor}]
-            subnet_id:  22207ede-1911-47ca-b509-5698e34cf46c
+            subnet_id:  6579eb07-88c3-4707-9c6e-ab90a78cca02
             lb_method: ROUND_ROBIN
             vip:
                 protocol_port: 8000
@@ -62,6 +67,7 @@ resources:
             pool_id: {get_resource: mypool}
             members: {get_attr: [servers, refs]}
 
+            
     monitor:
             type: OS::Neutron::HealthMonitor
             properties:
